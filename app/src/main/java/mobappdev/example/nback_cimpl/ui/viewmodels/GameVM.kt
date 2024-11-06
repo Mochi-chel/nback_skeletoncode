@@ -39,10 +39,14 @@ interface GameViewModel {
     val gameState: StateFlow<GameState>
     val score: StateFlow<Int>
     val highscore: StateFlow<Int>
-    val nBack: Int
+    val nBack: StateFlow<Int>
     val gridState: StateFlow<List<Color>>
+    val correctAnswers: StateFlow<Int>
+    val wrongAnswers: StateFlow<Int>
+
 
     fun setGameType(gameType: GameType)
+    fun setNBack(newNBack: Int)
     fun startGame()
 
     fun checkMatch(currentIndex: Int)
@@ -67,132 +71,164 @@ class GameVM(
     override val highscore: StateFlow<Int>
         get() = _highscore
 
-    // nBack is currently hardcoded
-    override val nBack: Int = 2
+    // nBack är fortfarande hårdkodad
+    private val _nBack = MutableStateFlow(2) // Default value
+    override val nBack: StateFlow<Int> = _nBack.asStateFlow()
 
-    private var job: Job? = null  // coroutine job for the game event
-    private val eventInterval: Long = 2000L  // 2000 ms (2s)
+    private var job: Job? = null
+    private val eventInterval: Long = 2000L
 
-    private val nBackHelper = NBackHelper()  // Helper that generate the event array
+    private val nBackHelper = NBackHelper()
     private var currentIndex = 0
-    private var events = emptyArray<Int>()  // Array with all events
+    private var events = emptyArray<Int>()
 
-    private val _matchFeedback = MutableStateFlow("")  // Håller feedback om rätt/fel
+    private val _matchFeedback = MutableStateFlow("")
     val matchFeedback: StateFlow<String> = _matchFeedback.asStateFlow()
 
     private val _gridState = MutableStateFlow(List(9) { Color.White })
     override val gridState: StateFlow<List<Color>> = _gridState
 
-    // Funktion för att uppdatera färgerna baserat på spelets logik
-    private fun updateGridColors(value: Int) {
-        _gridState.value = _gridState.value.mapIndexed { index, color ->
-            if (index == value) Color.Blue else Color.White // Byt färg på den valda rutan
-        }
-    }
+    // Statistiken för korrekta och felaktiga svar
+    private val _correctAnswers = MutableStateFlow(0)
+    override val correctAnswers: StateFlow<Int> = _correctAnswers.asStateFlow()
 
-    // Uppdatera färger för en viss cell
+    private val _wrongAnswers = MutableStateFlow(0)
+    override val wrongAnswers: StateFlow<Int> = _wrongAnswers.asStateFlow()
+
+    private var hasCheckedCurrentStimulus = false
+
     fun updateGridState(index: Int, color: Color) {
         _gridState.value = _gridState.value.toMutableList().also { it[index] = color }
     }
 
-    override fun checkMatch(currentIndex: Int) {
-        val stimulus = gameState.value.eventValue // Den aktuella stimulansen
-        val previousStimulus = events.getOrNull(currentIndex - nBack) // Stimulus som visades n steg tidigare
 
-        // En gemensam funktion för att jämföra stimuli oavsett speltyp
+    private fun updateGridColors(value: Int) {
+        val adjustedValue = value - 1
+
+        if (adjustedValue in 0 until _gridState.value.size) {
+            _gridState.value = _gridState.value.mapIndexed { index, color ->
+                if (index == adjustedValue) Color.Blue else Color.White
+            }
+        } else {
+            Log.d("GameVM", "Ogiltigt index: $adjustedValue")
+        }
+    }
+
+    override fun checkMatch(currentIndex: Int) {
+        if (hasCheckedCurrentStimulus) {
+            Log.d("GameVM", "Index $currentIndex är för lågt för en $nBack-back-jämförelse. \nHAS CHECKED")
+            return
+        }
+
+        val stimulus = events[currentIndex]
+        val previousStimulus = events.getOrNull(currentIndex - nBack.value)
+
+        Log.d("GameVM", "Checking match at index $currentIndex: stimulus = $stimulus, previousStimulus = $previousStimulus")
+
+
         val isMatch = stimulus == previousStimulus
 
-        // Om stimulanserna matchar
         if (isMatch) {
-            _gameState.value = _gameState.value.copy(matchFeedback = MatchFeedback.CORRECT) // Ge rätt feedback
-            _score.value += 1 // Öka poängen
+            _score.value += 1
+            _correctAnswers.value += 1
+            Log.d("GameVM", "Correct match! Score: ${_score.value}, Correct answers: ${_correctAnswers.value}")
         } else {
-            _gameState.value = _gameState.value.copy(matchFeedback = MatchFeedback.WRONG) // Ge fel feedback
+            _wrongAnswers.value += 1
+            Log.d("GameVM", "Wrong match! Wrong answers: ${_wrongAnswers.value}")
+        }
+        hasCheckedCurrentStimulus = true
+    }
+
+
+    fun resetCheckFlag() {
+        hasCheckedCurrentStimulus = false
+    }
+
+    override fun setNBack(newNBack: Int) {
+        _nBack.value = newNBack
+    }
+
+    override fun setGameType(gameType: GameType) {
+        _gameState.value = _gameState.value.copy(gameType = gameType)
+    }
+
+    override fun startGame() {
+        job?.cancel()
+        _score.value = 0
+        _correctAnswers.value = 0
+        _wrongAnswers.value = 0
+
+
+        events = nBackHelper.generateNBackString(10, 9, 30, nBack.value).toList().toTypedArray()
+        Log.d("GameVM", "Generated events: ${events.joinToString()}")
+        Log.d("nBack is: ", "${nBack.value}")
+
+
+        job = viewModelScope.launch {
+            when (gameState.value.gameType) {
+                GameType.Audio -> runAudioGame()
+                GameType.AudioVisual -> runAudioVisualGame()
+                GameType.Visual -> runVisualGame(events)
+            }
         }
     }
-/*override fun checkMatch() {
-    *
-   * Todo: This function should check if there is a match when the user presses a match button
-     * Make sure the user can only register a match once for each event.
 
-}*/
-
-
-override fun setGameType(gameType: GameType) {
-    // update the gametype in the gamestate
-    _gameState.value = _gameState.value.copy(gameType = gameType)
-}
-
-
-
-override fun startGame() {
-    job?.cancel()  // Cancel any existing game loop
-
-    // Get the events from our C-model (returns IntArray, so we need to convert to Array<Int>)
-    events = nBackHelper.generateNBackString(10, 9, 30, nBack).toList().toTypedArray()  // Todo Higher Grade: currently the size etc. are hardcoded, make these based on user input
-    Log.d("GameVM", "The following sequence was generated: ${events.contentToString()}")
-
-    job = viewModelScope.launch {
-        when (gameState.value.gameType) {
-            GameType.Audio -> runAudioGame()
-            GameType.AudioVisual -> runAudioVisualGame()
-            GameType.Visual -> runVisualGame(events)
+    private suspend fun runAudioGame() {
+        for (value in events) {
+            resetCheckFlag()
+            updateGridColors(value)
+            _gameState.value = _gameState.value.copy(eventValue = value)
+            delay(eventInterval)
+            resetGridColors()
+            delay(eventInterval)
         }
-        // Todo: update the highscore
     }
-}
-private suspend fun runAudioGame() {
-    for (value in events) {
-        updateGridColors(value)
-        _gameState.value = _gameState.value.copy(eventValue = value)
-        delay(500)
-        resetGridColors()
-        delay(500)
+
+    private suspend fun runVisualGame(events: Array<Int>){
+
+        for (index in events.indices) {
+            resetCheckFlag()
+            updateGridColors(events[index])
+            _gameState.value = _gameState.value.copy(eventValue = index)
+            delay(eventInterval)
+            resetGridColors()
+            delay(eventInterval)
+        }
     }
-}
 
-private suspend fun runVisualGame(events: Array<Int>){
-    for (value in events) {
-        updateGridColors(value)
-        _gameState.value = _gameState.value.copy(eventValue = value)
-        delay(500)
-        resetGridColors()
-        delay(500)
+    private suspend fun runAudioVisualGame(){
+        for (value in events) {
+            resetCheckFlag()
+            updateGridColors(value)
+            _gameState.value = _gameState.value.copy(eventValue = value)
+            delay(eventInterval)
+            resetGridColors()
+            delay(eventInterval)
+        }
     }
-}
 
-private suspend fun runAudioVisualGame(){
-    for (value in events) {
-        updateGridColors(value)
-        _gameState.value = _gameState.value.copy(eventValue = value)
-        delay(500)
-        resetGridColors()
-        delay(500)
+    private fun resetGridColors() {
+        _gridState.value = _gridState.value.map { Color.White }
     }
-}
 
-private fun resetGridColors() {
-    _gridState.value = _gridState.value.map { Color.White }
-}
+    companion object {
+        val Factory: ViewModelProvider.Factory = viewModelFactory {
+            initializer {
+                val application = (this[APPLICATION_KEY] as GameApplication)
+                GameVM(application.userPreferencesRespository)
+            }
+        }
+    }
 
-companion object {
-    val Factory: ViewModelProvider.Factory = viewModelFactory {
-        initializer {
-            val application = (this[APPLICATION_KEY] as GameApplication)
-            GameVM(application.userPreferencesRespository)
+    init {
+        viewModelScope.launch {
+            userPreferencesRepository.highscore.collect {
+                _highscore.value = it
+            }
         }
     }
 }
 
-init {
-    // Code that runs during creation of the vm
-    viewModelScope.launch {
-        userPreferencesRepository.highscore.collect {
-            _highscore.value = it
-        }
-    }
-}
-}
 
 // Class with the different game types
 enum class GameType{
@@ -212,22 +248,28 @@ enum class MatchFeedback {
 NONE, CORRECT, WRONG
 }
 
-class FakeVM: GameViewModel{
+class FakeVM(
+    override val correctAnswers: StateFlow<Int>,
+    override val wrongAnswers: StateFlow<Int>
+) : GameViewModel{
 override val gameState: StateFlow<GameState>
     get() = MutableStateFlow(GameState()).asStateFlow()
 override val score: StateFlow<Int>
     get() = MutableStateFlow(2).asStateFlow()
 override val highscore: StateFlow<Int>
     get() = MutableStateFlow(42).asStateFlow()
-override val nBack: Int
-    get() = 2
-override val gridState: StateFlow<List<Color>>
+override val nBack = TODO()
+    override val gridState: StateFlow<List<Color>>
     get() = TODO("Not yet implemented")
 
 override fun setGameType(gameType: GameType) {
 }
 
-override fun startGame() {
+    override fun setNBack(newNBack: Int) {
+        TODO("Not yet implemented")
+    }
+
+    override fun startGame() {
 
 }
 

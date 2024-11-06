@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -36,15 +37,19 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import mobappdev.example.nback_cimpl.ui.screens.NBackGrid
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import kotlinx.coroutines.delay
 import mobappdev.example.nback_cimpl.ui.viewmodels.GameType
 import mobappdev.example.nback_cimpl.ui.viewmodels.GameViewModel
 import mobappdev.example.nback_cimpl.ui.viewmodels.MatchFeedback
 
 @Composable
 fun GameScreen(
-    vm: GameViewModel, // Din ViewModel för spelet
-    onGameEnd: () -> Unit  // En callback för att gå tillbaka till hemskärmen efter spelet är klart
-) {
+    vm: GameViewModel,
+    onGameEnd: () -> Unit
+)
+{
 
     LaunchedEffect(Unit) {
         vm.startGame()
@@ -52,16 +57,26 @@ fun GameScreen(
 
     val gameState by vm.gameState.collectAsState()
     val score by vm.score.collectAsState()
+    val correctAnswers by vm.correctAnswers.collectAsState()
+    val wrongAnswers by vm.wrongAnswers.collectAsState()
     val gridState by vm.gridState.collectAsState()
 
     val currentIndex = gameState.eventValue
 
     // Avsluta spelet-knapp
     Button(onClick = {
-        onGameEnd() // Navigera tillbaka till startsidan
+        onGameEnd()
     }) {
         Text("End Game")
     }
+
+
+    Text(
+        modifier = Modifier.padding(48.dp),
+        text = "nBack: ${vm.nBack.collectAsState().value}",
+        style = MaterialTheme.typography.bodyLarge
+    )
+
     Column(
         modifier = Modifier.fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -75,90 +90,72 @@ fun GameScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
+        // Visa antal korrekta och felaktiga svar
+        Row {
+            Text("Correct: $correctAnswers", style = MaterialTheme.typography.bodyLarge)
+            Spacer(modifier = Modifier.width(16.dp))
+            Text("Wrong: $wrongAnswers", style = MaterialTheme.typography.bodyLarge)
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(40.dp),
             contentAlignment = Alignment.Center
         ) {
-            NBackGrid(gridState = gridState, modifier = Modifier.fillMaxHeight(0.6f))  // Ge NBackGrid ett begränsat höjdutrymme
+            NBackGrid(gridState = gridState, modifier = Modifier.fillMaxHeight(0.6f))
         }
-
 
         Spacer(modifier = Modifier.height(16.dp))
 
         when (gameState.gameType) {
-            // För VisualGame, visa endast Visual Match-knappen
             GameType.Visual -> {
                 Button(
                     onClick = { vm.checkMatch(currentIndex) },
-                    modifier = Modifier
-                        .size(150.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = when (gameState.matchFeedback) {
-                            MatchFeedback.CORRECT -> Color.Green
-                            MatchFeedback.WRONG -> Color.Red
-                            else -> Color(0xFF2196F3)
-                        },
-                        contentColor = Color.White
-                    )
+                    modifier = Modifier.size(150.dp)
                 ) {
                     Text("Visual Match")
                 }
             }
-            // För AudioGame, visa endast Audio Match-knappen
             GameType.Audio -> {
                 Button(
                     onClick = { vm.checkMatch(currentIndex) },
-                    modifier = Modifier.size(150.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = when (gameState.matchFeedback) {
-                            MatchFeedback.CORRECT -> Color.Green
-                            MatchFeedback.WRONG -> Color.Red
-                            else -> Color(0xFF2196F3)
-                        },
-                        contentColor = Color.White
-                    )
+                    modifier = Modifier.size(150.dp)
                 ) {
                     Text("Audio Match")
                 }
             }
-            // För AudioVisualGame, visa både Audio och Visual Match-knappar
             GameType.AudioVisual -> {
-                // Visual Match-knapp
                 Button(
                     onClick = { vm.checkMatch(currentIndex) },
-                    modifier = Modifier.size(150.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = when (gameState.matchFeedback) {
-                            MatchFeedback.CORRECT -> Color.Green
-                            MatchFeedback.WRONG -> Color.Red
-                            else -> Color(0xFF2196F3)
-                        },
-                        contentColor = Color.White
-                    )
+                    modifier = Modifier.size(150.dp)
                 ) {
                     Text("Visual Match")
                 }
-                Spacer(modifier = Modifier.height(8.dp))  // Avstånd mellan knapparna
-                // Audio Match-knapp
+                Spacer(modifier = Modifier.height(8.dp))
                 Button(
                     onClick = { vm.checkMatch(currentIndex) },
-                    modifier = Modifier.size(150.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = when (gameState.matchFeedback) {
-                            MatchFeedback.CORRECT -> Color.Green
-                            MatchFeedback.WRONG -> Color.Red
-                            else -> Color(0xFF2196F3)
-                        },
-                        contentColor = Color.White
-                    )
+                    modifier = Modifier.size(150.dp)
                 ) {
                     Text("Audio Match")
                 }
             }
-
-
         }
+
+ /*       Spacer(modifier = Modifier.height(16.dp))
+// Retry Button
+        Button(
+            onClick = {
+                vm.startGame()  // Restart the game by calling startGame from ViewModel
+            },
+            modifier = Modifier.size(150.dp)
+        ) {
+            Text("Retry")
+        }
+*/
     }
 }
+
+

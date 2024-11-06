@@ -85,4 +85,7 @@ dependencies {
 
     implementation("androidx.compose.foundation:foundation:1.2.0")
 
+    implementation("androidx.appcompat:appcompat:1.3.1")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.3.1")
+
 }

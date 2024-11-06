@@ -13,6 +13,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Slider
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -55,6 +56,7 @@ fun HomeScreen(
 ) {
     val highscore by vm.highscore.collectAsState()  // Highscore is its own StateFlow
     val gameState by vm.gameState.collectAsState()
+    val nBack by vm.nBack.collectAsState()
     val snackBarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
@@ -73,6 +75,42 @@ fun HomeScreen(
                 text = "High Score  $highscore",
                 style = MaterialTheme.typography.headlineLarge
             )
+
+            Text(
+                modifier = Modifier.padding(16.dp),
+                text = "nBack: ${vm.nBack.collectAsState().value}",
+                style = MaterialTheme.typography.bodyLarge
+            )
+
+
+            Row(
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.padding(16.dp)
+            ) {
+                // Minus Button
+                Button(
+                    onClick = {
+                        val newValue = (nBack - 1).coerceIn(1, 5)
+                        vm.setNBack(newValue)
+                    },
+                    modifier = Modifier.padding(end = 8.dp) // Adds some space between buttons
+                ) {
+                    Text(text = "-")
+                }
+
+                // Plus Button
+                Button(
+                    onClick = {
+                        val newValue = (nBack + 1).coerceIn(1, 5)
+                        vm.setNBack(newValue)
+                    },
+                    modifier = Modifier.padding(start = 8.dp) // Adds some space between buttons
+                ) {
+                    Text(text = "+")
+                }
+            }
+
             // Todo: You'll probably want to change this "BOX" part of the composable
             Box(
                 modifier = Modifier.weight(1f),
@@ -175,7 +213,10 @@ fun HomeScreenPreview() {
     // Since I am injecting a VM into my homescreen that depends on Application context, the preview doesn't work.
     Surface(){
         HomeScreen(
-            FakeVM(),
+            FakeVM(
+                correctAnswers = TODO(),
+                wrongAnswers = TODO()
+            ),
             onStartGame = TODO()
         )
     }
