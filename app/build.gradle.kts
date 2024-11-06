@@ -5,12 +5,12 @@ plugins {
 
 android {
     namespace = "mobappdev.example.nback_cimpl"
-    compileSdk = 33
+    compileSdk = 34
 
     defaultConfig {
         applicationId = "mobappdev.example.nback_cimpl"
         minSdk = 26
-        targetSdk = 33
+        targetSdk = 34
         versionCode = 1
         versionName = "1.0"
 
@@ -71,6 +71,7 @@ dependencies {
 
     // DataStore
     implementation("androidx.datastore:datastore-preferences:1.0.0")
+    implementation("androidx.constraintlayout:constraintlayout:2.2.0")
 
     testImplementation("junit:junit:4.13.2")
 
@@ -80,4 +81,8 @@ dependencies {
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
+
+
+    implementation("androidx.compose.foundation:foundation:1.2.0")
+
 }

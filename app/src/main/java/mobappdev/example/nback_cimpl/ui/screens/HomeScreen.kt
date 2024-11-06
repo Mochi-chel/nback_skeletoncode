@@ -32,6 +32,7 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import mobappdev.example.nback_cimpl.R
 import mobappdev.example.nback_cimpl.ui.viewmodels.FakeVM
+import mobappdev.example.nback_cimpl.ui.viewmodels.GameType
 import mobappdev.example.nback_cimpl.ui.viewmodels.GameViewModel
 
 /**
@@ -49,7 +50,8 @@ import mobappdev.example.nback_cimpl.ui.viewmodels.GameViewModel
 
 @Composable
 fun HomeScreen(
-    vm: GameViewModel
+    vm: GameViewModel,
+    onStartGame: () -> Unit
 ) {
     val highscore by vm.highscore.collectAsState()  // Highscore is its own StateFlow
     val gameState by vm.gameState.collectAsState()
@@ -68,7 +70,7 @@ fun HomeScreen(
         ) {
             Text(
                 modifier = Modifier.padding(32.dp),
-                text = "High-Score = $highscore",
+                text = "High Score  $highscore",
                 style = MaterialTheme.typography.headlineLarge
             )
             // Todo: You'll probably want to change this "BOX" part of the composable
@@ -87,16 +89,40 @@ fun HomeScreen(
                             textAlign = TextAlign.Center
                         )
                     }
-                    Button(onClick = vm::startGame) {
-                        Text(text = "Generate eventValues")
+                    Button(onClick = onStartGame) {//onClick = vm::startGame
+                        Text(text = "Start Game")
                     }
                 }
             }
+
+
             Text(
                 modifier = Modifier.padding(16.dp),
-                text = "Start Game".uppercase(),
+                text = "Select Game Type".uppercase(),
                 style = MaterialTheme.typography.displaySmall
             )
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                horizontalArrangement = Arrangement.SpaceAround,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Button for selecting Audio-Visual Game
+                Button(
+                    onClick = {
+                        vm.setGameType(GameType.AudioVisual) // Set the game type to AudioVisual
+                        scope.launch {
+                            snackBarHostState.showSnackbar(
+                                message = "Audio-Visual Game Selected"
+                            )
+                        }
+                    }) {
+                    Text(text = "Audio-Visual Game")
+                }
+            }
+
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -105,10 +131,10 @@ fun HomeScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Button(onClick = {
-                    // Todo: change this button behaviour
+                    vm.setGameType(GameType.Audio)// Todo: change this button behaviour
                     scope.launch {
                         snackBarHostState.showSnackbar(
-                            message = "Hey! you clicked the audio button"
+                            message = "Audio Game Selected"
                         )
                     }
                 }) {
@@ -122,10 +148,10 @@ fun HomeScreen(
                 }
                 Button(
                     onClick = {
-                        // Todo: change this button behaviour
+                        vm.setGameType(GameType.Visual)// Todo: change this button behaviour
                         scope.launch {
                             snackBarHostState.showSnackbar(
-                                message = "Hey! you clicked the visual button",
+                                message = "Visual Game Selected",
                                 duration = SnackbarDuration.Short
                             )
                         }
@@ -148,6 +174,9 @@ fun HomeScreen(
 fun HomeScreenPreview() {
     // Since I am injecting a VM into my homescreen that depends on Application context, the preview doesn't work.
     Surface(){
-        HomeScreen(FakeVM())
+        HomeScreen(
+            FakeVM(),
+            onStartGame = TODO()
+        )
     }
 }
