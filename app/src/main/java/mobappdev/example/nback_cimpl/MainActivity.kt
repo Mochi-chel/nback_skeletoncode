@@ -1,7 +1,9 @@
 package mobappdev.example.nback_cimpl
 
 import android.content.Context
+import android.content.Intent
 import android.os.Bundle
+import android.widget.Button
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.fillMaxSize
@@ -61,6 +63,10 @@ class MainActivity : ComponentActivity() {
 
                     val context = LocalContext.current
                     val gameViewModel: GameVM = viewModel(factory = GameVM.Factory)
+                    val onOpenSettings = {
+                        val intent = Intent(context, SettingsActivity::class.java)
+                        context.startActivity(intent)
+                    }
 
                     NavHost(
                         navController = navController,
@@ -69,7 +75,8 @@ class MainActivity : ComponentActivity() {
                         composable("home") {
                             HomeScreen(
                                 vm = gameViewModel,
-                                onStartGame = { navController.navigate("game") }
+                                onStartGame = { navController.navigate("game") },
+                                onOpenSettings = onOpenSettings
                             )
                         }
                         composable("game") {

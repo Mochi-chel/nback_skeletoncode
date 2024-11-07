@@ -52,7 +52,8 @@ import mobappdev.example.nback_cimpl.ui.viewmodels.GameViewModel
 @Composable
 fun HomeScreen(
     vm: GameViewModel,
-    onStartGame: () -> Unit
+    onStartGame: () -> Unit,
+    onOpenSettings: () -> Unit
 ) {
     val highscore by vm.highscore.collectAsState()  // Highscore is its own StateFlow
     val gameState by vm.gameState.collectAsState()
@@ -70,6 +71,9 @@ fun HomeScreen(
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            Button(onClick = onOpenSettings) {
+                Text("Open Settings")
+            }
             Text(
                 modifier = Modifier.padding(32.dp),
                 text = "High Score  $highscore",
@@ -217,7 +221,8 @@ fun HomeScreenPreview() {
                 correctAnswers = TODO(),
                 wrongAnswers = TODO()
             ),
-            onStartGame = TODO()
+            onStartGame = TODO(),
+            onOpenSettings = TODO()
         )
     }
 }

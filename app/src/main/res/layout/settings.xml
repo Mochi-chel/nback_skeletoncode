@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <!-- Skapa en slider för att justera antal händelser -->
+    <TextView
+        android:id="@+id/numEventsLabel"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Number of Events"
+        android:textSize="18sp"/>
+
+    <SeekBar
+        android:id="@+id/numEventsSeekBar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:max="100"
+        android:progress="10"/>
+
+    <!-- Skapa en slider för att justera tiden mellan händelser -->
+    <TextView
+        android:id="@+id/timeBetweenEventsLabel"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Time Between Events (ms)"
+        android:textSize="18sp"/>
+
+    <SeekBar
+        android:id="@+id/timeBetweenEventsSeekBar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:max="5000"
+        android:progress="1000"/>
+
+    <!-- Skapa en dropdown för att välja n-back nivå -->
+    <TextView
+        android:id="@+id/nBackLevelLabel"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="N-Back Level"
+        android:textSize="18sp"/>
+
+    <Button
+        android:id="@+id/openSettingsButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Open Settings"/>
+
+
+    <!-- Lägg till fler UI-element för andra inställningar, som gridstorlek och antalet talade bokstäver -->
+
+</LinearLayout>

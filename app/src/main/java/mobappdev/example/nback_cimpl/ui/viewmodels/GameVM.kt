@@ -101,7 +101,6 @@ class GameVM(
     private val nBackHelper = NBackHelper()
     private var currentIndex = 0
     private var events = emptyArray<Int>()
-    private var audioevents = emptyArray<Int>()
 
     private val _matchFeedback = MutableStateFlow("")
     val matchFeedback: StateFlow<String> = _matchFeedback.asStateFlow()
@@ -120,6 +119,26 @@ class GameVM(
     private var audioEvents = emptyArray<Int>()
 
     private var hasCheckedCurrentStimulus = false
+
+    fun updateSettings(
+        numEvents: Int,
+        timeBetweenEvents: Int,
+        nBackLevel: Int,
+        gridSize: Int,
+        numSpokenLetters: Int
+    ) {
+        viewModelScope.launch {
+            // Uppdatera DataStore eller preferenser med de nya inställningarna
+            userPreferencesRepository.saveNumEvents(numEvents)
+            userPreferencesRepository.saveTimeBetweenEvents(timeBetweenEvents)
+            userPreferencesRepository.saveNBackLevel(nBackLevel)
+            userPreferencesRepository.saveGridSize(gridSize)
+            userPreferencesRepository.saveNumSpokenLetters(numSpokenLetters)
+
+            // Uppdatera nBack värdet i ViewModel
+            _nBack.value = nBackLevel
+        }
+    }
 
     fun updateGridState(index: Int, color: Color) {
         _gridState.value = _gridState.value.toMutableList().also { it[index] = color }

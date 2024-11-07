@@ -2,4 +2,7 @@
 <resources>
 
     <style name="Theme.NBack_CImpl" parent="android:Theme.Material.Light.NoActionBar" />
+
+    <style name="AppCompatSettingsTheme" parent="Theme.AppCompat.Light.NoActionBar"/>
+
 </resources>
