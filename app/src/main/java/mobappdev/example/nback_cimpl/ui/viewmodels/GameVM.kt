@@ -48,6 +48,7 @@ interface GameViewModel {
     val gridState: StateFlow<List<Color>>
     val correctAnswers: StateFlow<Int>
     val wrongAnswers: StateFlow<Int>
+    val gridSize: StateFlow<Int>
 
 
     fun setGameType(gameType: GameType)
@@ -96,7 +97,7 @@ class GameVM(
     override val nBack: StateFlow<Int> = _nBack.asStateFlow()
 
     private val _gridSize = MutableStateFlow(3) // Default grid_size
-    val gridSize: StateFlow<Int> get() = _gridSize
+    override val gridSize: StateFlow<Int> get() = _gridSize
 
     private val _eventsPerRound = MutableStateFlow(10) // Default events_per_round
     val eventsPerRound: StateFlow<Int> get() = _eventsPerRound
@@ -117,7 +118,7 @@ class GameVM(
     private val _matchFeedback = MutableStateFlow("")
     val matchFeedback: StateFlow<String> = _matchFeedback.asStateFlow()
 
-    private val _gridState = MutableStateFlow(List(9) { Color.White })
+    private val _gridState = MutableStateFlow(List(_gridSize.value * _gridSize.value) { Color.White })
     override val gridState: StateFlow<List<Color>> = _gridState
 
     // Statistiken för korrekta och felaktiga svar
@@ -248,15 +249,15 @@ class GameVM(
         _correctAnswers.value = 0
         _wrongAnswers.value = 0
 
-        events = nBackHelper.generateNBackString(eventsPerRound.value, 9, 30, nBack.value).toList().toTypedArray()
+        events = nBackHelper.generateNBackString(eventsPerRound.value, gridSize.value*gridSize.value, 30, nBack.value).toList().toTypedArray()
         Log.d("GameVM", "Generated events: ${events.joinToString()}")
         Log.d("GameVM", "nBack value: ${nBack.value}")
 
 
         if (gameState.value.gameType == GameType.AudioVisual) {
-            audioEvents = nBackHelper.generateNBackString(eventsPerRound.value, 9, 30, nBack.value).toList().toTypedArray()
+            audioEvents = nBackHelper.generateNBackString(eventsPerRound.value, gridSize.value*gridSize.value, 30, nBack.value).toList().toTypedArray()
             delay(500)
-            visualEvents = nBackHelper.generateNBackString(eventsPerRound.value, 9, 30, nBack.value).toList().toTypedArray()
+            visualEvents = nBackHelper.generateNBackString(eventsPerRound.value, gridSize.value*gridSize.value, 30, nBack.value).toList().toTypedArray()
 
             Log.d("GameVM", "Generated audio events: ${audioEvents.joinToString()}")
             Log.d("GameVM", "Generated visual events: ${visualEvents.joinToString()}")
@@ -271,10 +272,14 @@ class GameVM(
         }
     }
 
-    private fun numberToLetter(number: Int): String {
-        // Omvandla 1 till A, 2 till B, osv.
-        val letter = 'A' + (number - 1)
-        return letter.toString()
+    private fun numberToLetter(number: Int, numLetters: Int): String {
+        val letters = StringBuilder()
+        for (i in 0 until numLetters) {
+            val letter = 'A' + ((number + i - 1) % 26) // Loopar tillbaka efter Z
+            letters.append(letter)
+        }
+        return letters.toString()
+
     }
 
     private suspend fun runVisualGame(events: Array<Int>){
@@ -296,7 +301,7 @@ class GameVM(
             _gameState.value = _gameState.value.copy(eventValue = index)
 
             val stimulus = events[index]
-            val letter = numberToLetter(stimulus)
+            val letter = numberToLetter(stimulus, _numSpokenLetters.value)
             ttsManager?.speak("$letter")
             delay(timeBetweenEvents.value)
             resetGridColors()
@@ -311,13 +316,13 @@ class GameVM(
             val visualStimulus = visualEvents[index]
 
 
-            val letter = numberToLetter(audioStimulus)
+            val letter = numberToLetter(audioStimulus, _numSpokenLetters.value)
             ttsManager?.speak("$letter")
             updateGridColors(visualStimulus)
             _gameState.value = _gameState.value.copy(eventValue = index)
-            delay(timeBetweenEvents.value)  // Vänta för att visa den visuella stimulansen
+            delay(timeBetweenEvents.value)
             resetGridColors()
-            delay(timeBetweenEvents.value)  // Vänta mellan visuella stimulanser
+            delay(timeBetweenEvents.value)
         }
     }
 
@@ -354,6 +359,8 @@ class GameVM(
             // Hämta och uppdatera grid_size
             userPreferencesRepository.getPreferenceValue("grid_size").collect { savedGridSize ->
                 _gridSize.value = savedGridSize
+                // Update gridState size to match new gridSize
+                _gridState.value = List(savedGridSize * savedGridSize) { Color.White }
             }
         }
         viewModelScope.launch {
@@ -409,8 +416,10 @@ override val highscore: StateFlow<Int>
 override val nBack = TODO()
     override val gridState: StateFlow<List<Color>>
     get() = TODO("Not yet implemented")
+    override val gridSize: StateFlow<Int>
+        get() = TODO("Not yet implemented")
 
-override fun setGameType(gameType: GameType) {
+    override fun setGameType(gameType: GameType) {
 }
 
     override fun setNBack(newNBack: Int) {

@@ -75,15 +75,16 @@ class SettingsActivity : AppCompatActivity() {
                 valueRange = 1f..10f
             )
 
-            // Gridstorlek
-            GridSizeSwitch(preferencesRepository)
-
             // Antal tal som ska talas
-           /* SettingSlider(
+            SettingSlider(
                 label = "Number of Spoken Letters (Auditory Stimuli)",
                 valueKey = "num_spoken_letters",
-                preferencesRepository = preferencesRepository
-            )*/
+                preferencesRepository = preferencesRepository,
+                valueRange = 1f..5f
+            )
+
+            // Gridstorlek
+            GridSizeSwitch(preferencesRepository)
 
             // Spara inställningar-knapp
             Button(onClick = {

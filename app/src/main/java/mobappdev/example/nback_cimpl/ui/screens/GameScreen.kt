@@ -36,7 +36,6 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import mobappdev.example.nback_cimpl.ui.screens.NBackGrid
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import kotlinx.coroutines.delay
@@ -61,6 +60,7 @@ fun GameScreen(
     val correctAnswers by vm.correctAnswers.collectAsState()
     val wrongAnswers by vm.wrongAnswers.collectAsState()
     val gridState by vm.gridState.collectAsState()
+    val gridSize by vm.gridSize.collectAsState()
 
     val currentIndex = gameState.eventValue
 
@@ -106,7 +106,7 @@ fun GameScreen(
                 .padding(40.dp),
             contentAlignment = Alignment.Center
         ) {
-            NBackGrid(gridState = gridState, modifier = Modifier.fillMaxHeight(0.6f))
+            NBackGridSelector(gridState = gridState, gridSize = gridSize, modifier = Modifier.fillMaxHeight(0.6f))
         }
 
         Spacer(modifier = Modifier.height(16.dp))
