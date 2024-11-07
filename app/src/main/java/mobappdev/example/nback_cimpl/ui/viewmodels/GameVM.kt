@@ -20,6 +20,7 @@ import mobappdev.example.nback_cimpl.NBackHelper
 import mobappdev.example.nback_cimpl.data.UserPreferencesRepository
 import mobappdev.example.nback_cimpl.ui.screens.TTSManager
 import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.MutableLiveData
 
 
 /**
@@ -91,9 +92,21 @@ class GameVM(
     override val highscore: StateFlow<Int>
         get() = _highscore
 
-    // nBack är fortfarande hårdkodad
-    private val _nBack = MutableStateFlow(2) // Default value
+    private val _nBack = MutableStateFlow<Int>(2)
     override val nBack: StateFlow<Int> = _nBack.asStateFlow()
+
+    private val _gridSize = MutableStateFlow(3) // Default grid_size
+    val gridSize: StateFlow<Int> get() = _gridSize
+
+    private val _eventsPerRound = MutableStateFlow(10) // Default events_per_round
+    val eventsPerRound: StateFlow<Int> get() = _eventsPerRound
+
+    private val _timeBetweenEvents = MutableStateFlow(2000L) // Default time_between_events
+    val timeBetweenEvents: StateFlow<Long> get() = _timeBetweenEvents
+
+    private val _numSpokenLetters = MutableStateFlow(3) // Default num_spoken_letters
+    val numSpokenLetters: StateFlow<Int> get() = _numSpokenLetters
+
 
     private var job: Job? = null
     private val eventInterval: Long = 2000L
@@ -101,7 +114,6 @@ class GameVM(
     private val nBackHelper = NBackHelper()
     private var currentIndex = 0
     private var events = emptyArray<Int>()
-
     private val _matchFeedback = MutableStateFlow("")
     val matchFeedback: StateFlow<String> = _matchFeedback.asStateFlow()
 
@@ -115,30 +127,13 @@ class GameVM(
     private val _wrongAnswers = MutableStateFlow(0)
     override val wrongAnswers: StateFlow<Int> = _wrongAnswers.asStateFlow()
 
+    //Deklarerar för det som behöver i audioVisual
     private var visualEvents = emptyArray<Int>()
     private var audioEvents = emptyArray<Int>()
 
     private var hasCheckedCurrentStimulus = false
 
-    fun updateSettings(
-        numEvents: Int,
-        timeBetweenEvents: Int,
-        nBackLevel: Int,
-        gridSize: Int,
-        numSpokenLetters: Int
-    ) {
-        viewModelScope.launch {
-            // Uppdatera DataStore eller preferenser med de nya inställningarna
-            userPreferencesRepository.saveNumEvents(numEvents)
-            userPreferencesRepository.saveTimeBetweenEvents(timeBetweenEvents)
-            userPreferencesRepository.saveNBackLevel(nBackLevel)
-            userPreferencesRepository.saveGridSize(gridSize)
-            userPreferencesRepository.saveNumSpokenLetters(numSpokenLetters)
 
-            // Uppdatera nBack värdet i ViewModel
-            _nBack.value = nBackLevel
-        }
-    }
 
     fun updateGridState(index: Int, color: Color) {
         _gridState.value = _gridState.value.toMutableList().also { it[index] = color }
@@ -253,13 +248,15 @@ class GameVM(
         _correctAnswers.value = 0
         _wrongAnswers.value = 0
 
-        events = nBackHelper.generateNBackString(10, 9, 30, nBack.value).toList().toTypedArray()
+        events = nBackHelper.generateNBackString(eventsPerRound.value, 9, 30, nBack.value).toList().toTypedArray()
         Log.d("GameVM", "Generated events: ${events.joinToString()}")
+        Log.d("GameVM", "nBack value: ${nBack.value}")
+
 
         if (gameState.value.gameType == GameType.AudioVisual) {
-            audioEvents = nBackHelper.generateNBackString(10, 9, 30, nBack.value).toList().toTypedArray()
+            audioEvents = nBackHelper.generateNBackString(eventsPerRound.value, 9, 30, nBack.value).toList().toTypedArray()
             delay(500)
-            visualEvents = nBackHelper.generateNBackString(10, 9, 30, nBack.value).toList().toTypedArray()
+            visualEvents = nBackHelper.generateNBackString(eventsPerRound.value, 9, 30, nBack.value).toList().toTypedArray()
 
             Log.d("GameVM", "Generated audio events: ${audioEvents.joinToString()}")
             Log.d("GameVM", "Generated visual events: ${visualEvents.joinToString()}")
@@ -286,9 +283,9 @@ class GameVM(
             resetCheckFlag()
             updateGridColors(events[index])
             _gameState.value = _gameState.value.copy(eventValue = index)
-            delay(eventInterval)
+            delay(timeBetweenEvents.value)
             resetGridColors()
-            delay(eventInterval)
+            delay(timeBetweenEvents.value)
         }
     }
 
@@ -301,9 +298,9 @@ class GameVM(
             val stimulus = events[index]
             val letter = numberToLetter(stimulus)
             ttsManager?.speak("$letter")
-            delay(eventInterval)
+            delay(timeBetweenEvents.value)
             resetGridColors()
-            delay(eventInterval)
+            delay(timeBetweenEvents.value)
         }
     }
 
@@ -318,9 +315,9 @@ class GameVM(
             ttsManager?.speak("$letter")
             updateGridColors(visualStimulus)
             _gameState.value = _gameState.value.copy(eventValue = index)
-            delay(eventInterval)  // Vänta för att visa den visuella stimulansen
+            delay(timeBetweenEvents.value)  // Vänta för att visa den visuella stimulansen
             resetGridColors()
-            delay(eventInterval)  // Vänta mellan visuella stimulanser
+            delay(timeBetweenEvents.value)  // Vänta mellan visuella stimulanser
         }
     }
 
@@ -346,7 +343,38 @@ class GameVM(
             userPreferencesRepository.highscore.collect {
                 _highscore.value = it
             }
+
         }
+        viewModelScope.launch {
+            userPreferencesRepository.getPreferenceValue("n_back_level").collect { savedNBackLevel ->
+                _nBack.value = savedNBackLevel
+            }
+        }
+        viewModelScope.launch {
+            // Hämta och uppdatera grid_size
+            userPreferencesRepository.getPreferenceValue("grid_size").collect { savedGridSize ->
+                _gridSize.value = savedGridSize
+            }
+        }
+        viewModelScope.launch {
+            // Hämta och uppdatera events_per_round
+            userPreferencesRepository.getPreferenceValue("events_per_round").collect { savedEventsPerRound ->
+                _eventsPerRound.value = savedEventsPerRound
+            }
+        }
+        viewModelScope.launch {
+            // Hämta och uppdatera time_between_events
+            userPreferencesRepository.getPreferenceValue("time_between_events").collect { savedTimeBetweenEvents ->
+                _timeBetweenEvents.value = savedTimeBetweenEvents.toLong()
+            }
+        }
+        viewModelScope.launch {
+            // Hämta och uppdatera num_spoken_letters
+            userPreferencesRepository.getPreferenceValue("num_spoken_letters").collect { savedNumSpokenLetters ->
+                _numSpokenLetters.value = savedNumSpokenLetters
+            }
+        }
+
     }
 }
 

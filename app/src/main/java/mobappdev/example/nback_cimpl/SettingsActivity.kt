@@ -21,20 +21,21 @@ import kotlinx.coroutines.launch
 import mobappdev.example.nback_cimpl.data.UserPreferencesRepository
 import androidx.compose.foundation.layout.Column
 import androidx.compose.material3.Card
+import androidx.compose.material3.Switch
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.runtime.collectAsState
 import androidx.datastore.preferences.preferencesDataStore
+import kotlinx.coroutines.flow.first
+
 
 class SettingsActivity : AppCompatActivity() {
-
     private lateinit var preferencesRepository: UserPreferencesRepository
-    private val Context.dataStore by preferencesDataStore(name = "user_preferences")
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         // Skapa en instans av UserPreferencesRepository
-        preferencesRepository = UserPreferencesRepository(applicationContext.dataStore)
+        preferencesRepository = UserPreferencesRepository(applicationContext)
 
         // Ställ in Content för inställningsskärmen
         setContent {
@@ -54,36 +55,35 @@ class SettingsActivity : AppCompatActivity() {
             SettingSlider(
                 label = "Number of Events in Round",
                 valueKey = "events_per_round",
-                preferencesRepository = preferencesRepository
+                preferencesRepository = preferencesRepository,
+                valueRange = 10f..24f
             )
 
             // Tid mellan events
             SettingSlider(
                 label = "Time Between Events (seconds)",
                 valueKey = "time_between_events",
-                preferencesRepository = preferencesRepository
+                preferencesRepository = preferencesRepository,
+                valueRange = 500f..2500f
             )
 
             // n-Back nivå
             SettingSlider(
                 label = "n-Back Level",
                 valueKey = "n_back_level",
-                preferencesRepository = preferencesRepository
+                preferencesRepository = preferencesRepository,
+                valueRange = 1f..10f
             )
 
             // Gridstorlek
-            SettingSlider(
-                label = "Grid Size (Visual Stimuli)",
-                valueKey = "grid_size",
-                preferencesRepository = preferencesRepository
-            )
+            GridSizeSwitch(preferencesRepository)
 
             // Antal tal som ska talas
-            SettingSlider(
+           /* SettingSlider(
                 label = "Number of Spoken Letters (Auditory Stimuli)",
                 valueKey = "num_spoken_letters",
                 preferencesRepository = preferencesRepository
-            )
+            )*/
 
             // Spara inställningar-knapp
             Button(onClick = {
@@ -98,38 +98,49 @@ class SettingsActivity : AppCompatActivity() {
     }
 
     @Composable
+    fun GridSizeSwitch(preferencesRepository: UserPreferencesRepository) {
+        val currentValue = preferencesRepository.getPreferenceValue("grid_size").collectAsState(initial = 3).value
+        val isFiveByFive = currentValue == 5
+
+        Column {
+            Text("Grid Size (Visual Stimuli): ${if (isFiveByFive) "5x5" else "3x3"}")
+
+            Switch(
+                checked = isFiveByFive,
+                onCheckedChange = { isChecked ->
+                    val newSize = if (isChecked) 5 else 3
+                    lifecycleScope.launch {
+                        preferencesRepository.savePreferenceValue("grid_size", newSize)
+                    }
+                }
+            )
+        }
+    }
+
+
+    @Composable
     fun SettingSlider(
         label: String,
         valueKey: String,
-        preferencesRepository: UserPreferencesRepository
+        preferencesRepository: UserPreferencesRepository,
+        valueRange: ClosedFloatingPointRange<Float>,  // Lägg till detta parameter för att ange intervall
+        isInteger: Boolean = false
     ) {
-        // Hämta nuvarande värde från DataStore som Flow och omvandla till en stat
-        val currentValue = when (valueKey) {
-            "events_per_round" -> preferencesRepository.numEvents.collectAsState(initial = 10).value
-            "time_between_events" -> preferencesRepository.timeBetweenEvents.collectAsState(initial = 1000).value
-            "n_back_level" -> preferencesRepository.nBackLevel.collectAsState(initial = 2).value
-            "grid_size" -> preferencesRepository.gridSize.collectAsState(initial = 3).value
-            "num_spoken_letters" -> preferencesRepository.numSpokenLetters.collectAsState(initial = 1).value
-            else -> 10 // Fallback-värde
-        }
+        val currentValue = preferencesRepository.getPreferenceValue(valueKey).collectAsState(initial = 10).value
 
         Column(modifier = Modifier.padding(16.dp)) {
             Text(label)
 
-            // Slider för inställningar
             Slider(
                 value = currentValue.toFloat(),
                 onValueChange = { value ->
-                    // Spara det nya värdet till DataStore
-                    when (valueKey) {
-                        "events_per_round" -> lifecycleScope.launch { preferencesRepository.saveNumEvents(value.toInt()) }
-                        "time_between_events" -> lifecycleScope.launch { preferencesRepository.saveTimeBetweenEvents(value.toInt()) }
-                        "n_back_level" -> lifecycleScope.launch { preferencesRepository.saveNBackLevel(value.toInt()) }
-                        "grid_size" -> lifecycleScope.launch { preferencesRepository.saveGridSize(value.toInt()) }
-                        "num_spoken_letters" -> lifecycleScope.launch { preferencesRepository.saveNumSpokenLetters(value.toInt()) }
+                    lifecycleScope.launch {
+                        // Konvertera till Int om det är en Integer slider
+                        val finalValue = if (isInteger) value.toInt() else value.toLong().toInt() // Om Long, spara som Int
+                        preferencesRepository.savePreferenceValue(valueKey, finalValue)
                     }
                 },
-                valueRange = 1f..10f, // Här kan du justera värdeintervallet efter behov
+                valueRange = valueRange,
                 modifier = Modifier.padding(8.dp)
             )
 
@@ -140,15 +151,29 @@ class SettingsActivity : AppCompatActivity() {
     // Spara inställningar till DataStore
     private suspend fun saveSettings(preferencesRepository: UserPreferencesRepository, context: Context) {
         try {
-            preferencesRepository.saveNumEvents(20)
-            preferencesRepository.saveTimeBetweenEvents(10) // i sekunder
-            preferencesRepository.saveNBackLevel(2)
-            preferencesRepository.saveGridSize(3)
-            preferencesRepository.saveNumSpokenLetters(1)
+            // Hämta de aktuella värdena från UI genom att samla in flödena
+            val numEvents = preferencesRepository.getPreferenceValue("events_per_round").first() // Samla in värdet från flödet
+            val timeBetweenEvents = preferencesRepository.getPreferenceValue("time_between_events").first()
+            val nBackLevel = preferencesRepository.getPreferenceValue("n_back_level").first()
+            val gridSize = preferencesRepository.getPreferenceValue("grid_size").first()
+            val numSpokenLetters = preferencesRepository.getPreferenceValue("num_spoken_letters").first()
 
+            // Spara de hämtade värdena
+            preferencesRepository.savePreferenceValue("events_per_round", numEvents)
+            preferencesRepository.savePreferenceValue("time_between_events", timeBetweenEvents)
+            preferencesRepository.savePreferenceValue("n_back_level", nBackLevel)
+            preferencesRepository.savePreferenceValue("grid_size", gridSize)
+            preferencesRepository.savePreferenceValue("num_spoken_letters", numSpokenLetters)
+
+            println("n-Back Level saved: $nBackLevel")
+            println("Grid Size saved: $gridSize")
+
+            // Visa en toast om att inställningarna har sparats
             Toast.makeText(context, "Settings saved!", Toast.LENGTH_SHORT).show()
         } catch (e: Exception) {
             Toast.makeText(context, "Error saving settings", Toast.LENGTH_SHORT).show()
         }
     }
+
+
 }
