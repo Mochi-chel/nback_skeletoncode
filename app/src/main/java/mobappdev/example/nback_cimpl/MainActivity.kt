@@ -1,5 +1,6 @@
 package mobappdev.example.nback_cimpl
 
+import android.content.Context
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -7,11 +8,14 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.datastore.preferences.preferencesDataStore
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import mobappdev.example.nback_cimpl.data.UserPreferencesRepository
 import mobappdev.example.nback_cimpl.ui.screens.GameScreen
 import mobappdev.example.nback_cimpl.ui.screens.HomeScreen
 import mobappdev.example.nback_cimpl.ui.theme.NBack_CImplTheme
@@ -29,6 +33,8 @@ import mobappdev.example.nback_cimpl.ui.viewmodels.GameVM
  * Author: Yeetivity
  *
  */
+
+//val Context.dataStorePref by preferencesDataStore(name = "user_prefs")
 
 
 class MainActivity : ComponentActivity() {
@@ -51,6 +57,9 @@ class MainActivity : ComponentActivity() {
                     // Instantiate the homescreen
                     //HomeScreen(vm = gameViewModel)
                     val navController = rememberNavController()
+                    //val userPreferencesRepository = UserPreferencesRepository(dataStorePref)
+
+                    val context = LocalContext.current
                     val gameViewModel: GameVM = viewModel(factory = GameVM.Factory)
 
                     NavHost(

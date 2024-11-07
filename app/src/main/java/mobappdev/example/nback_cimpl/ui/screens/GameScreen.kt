@@ -43,6 +43,7 @@ import kotlinx.coroutines.delay
 import mobappdev.example.nback_cimpl.ui.viewmodels.GameType
 import mobappdev.example.nback_cimpl.ui.viewmodels.GameViewModel
 import mobappdev.example.nback_cimpl.ui.viewmodels.MatchFeedback
+import mobappdev.example.nback_cimpl.ui.viewmodels.MatchType
 
 @Composable
 fun GameScreen(
@@ -129,14 +130,14 @@ fun GameScreen(
             }
             GameType.AudioVisual -> {
                 Button(
-                    onClick = { vm.checkMatch(currentIndex) },
+                    onClick = { vm.checkMatch(currentIndex, MatchType.VISUAL) },
                     modifier = Modifier.size(150.dp)
                 ) {
                     Text("Visual Match")
                 }
                 Spacer(modifier = Modifier.height(8.dp))
                 Button(
-                    onClick = { vm.checkMatch(currentIndex) },
+                    onClick = { vm.checkMatch(currentIndex, MatchType.AUDIO) },
                     modifier = Modifier.size(150.dp)
                 ) {
                     Text("Audio Match")
